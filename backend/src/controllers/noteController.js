@@ -2,20 +2,23 @@ const mongoose = require("mongoose");
 const Note = require("../models/Note");
 
 function parsePagination(query) {
-  const page = Number.parseInt(query.page, 10) || 1;
-  const limit = Number.parseInt(query.limit, 10) || 10;
+  function parsePositiveInteger(value, fallback) {
+    if (value === undefined) return fallback;
+    if (typeof value !== "string" || !/^\\d+$/.test(value)) return null;
 
-  if (
-    !Number.isSafeInteger(page) ||
-    !Number.isSafeInteger(limit) ||
-    page < 1 ||
-    limit < 1 ||
-    limit > 100
-  ) {
-    return null;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
   }
 
-  return { page, limit, skip: (page - 1) * limit };
+  const page = parsePositiveInteger(query.page, 1);
+  const limit = parsePositiveInteger(query.limit, 10);
+
+  if (page === null || limit === null || limit > 100) return null;
+
+  const skip = (page - 1) * limit;
+  if (!Number.isSafeInteger(skip)) return null;
+
+  return { page, limit, skip };
 }
 
 function validText(value, maxLength) {
@@ -68,7 +71,7 @@ async function listNotes(req, res) {
 }
 
 async function createNote(req, res) {
-  const { title, content } = req.body;
+  const { title, content } = req.body || {};
 
   if (
     !validText(title, 200) ||
