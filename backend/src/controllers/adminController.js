@@ -5,7 +5,7 @@ const Note = require("../models/Note");
 function getPagination(query) {
   function parsePositiveInteger(value, fallback) {
     if (value === undefined) return fallback;
-    if (typeof value !== "string" || !/^\\d+$/.test(value)) return null;
+    if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
 
     const parsed = Number(value);
     return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
