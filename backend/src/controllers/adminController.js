@@ -3,21 +3,20 @@ const User = require("../models/User");
 const Note = require("../models/Note");
 
 function getPagination(query) {
-  const page = Number(query.page ?? 1);
-  const limit = Number(query.limit ?? 10);
+  function parsePositiveInteger(value, fallback) {
+    if (value === undefined) return fallback;
+    if (typeof value !== "string" || !/^\\d+$/.test(value)) return null;
 
-  if (
-    !Number.isSafeInteger(page) ||
-    !Number.isSafeInteger(limit) ||
-    page < 1 ||
-    limit < 1 ||
-    limit > 100
-  ) {
-    return null;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
   }
 
-  const skip = (page - 1) * limit;
+  const page = parsePositiveInteger(query.page, 1);
+  const limit = parsePositiveInteger(query.limit, 10);
 
+  if (page === null || limit === null || limit > 100) return null;
+
+  const skip = (page - 1) * limit;
   if (!Number.isSafeInteger(skip)) return null;
 
   return { page, limit, skip };
@@ -115,13 +114,21 @@ async function groupUsersByInterest(req, res) {
   try {
     const groups = await User.aggregate([
       { $unwind: "$interests" },
+      // Count each user at most once per interest, even if legacy data contains duplicates.
       {
         $group: {
-          _id: "$interests",
+          _id: { user: "$_id", interest: "$interests" },
+          name: { $first: "$name" },
+          email: { $first: "$email" },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.interest",
           userCount: { $sum: 1 },
           users: {
             $push: {
-              id: "$_id",
+              id: "$_id.user",
               name: "$name",
               email: "$email",
             },
