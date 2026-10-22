@@ -52,6 +52,9 @@ describe("Admin aggregation requirements", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.data).toEqual(expectedGroups);
     expect(aggregateSpy).toHaveBeenCalledTimes(1);
+    const pipeline = aggregateSpy.mock.calls[0][0];
+    expect(pipeline.some((stage) => stage.$unwind?.$interests === "$interests")).toBe(true);
+    expect(pipeline.filter((stage) => stage.$group)).toHaveLength(2);
     expect(findSpy).not.toHaveBeenCalled();
     expect(countSpy).not.toHaveBeenCalled();
   });
@@ -87,8 +90,7 @@ describe("Admin aggregation requirements", () => {
     expect(aggregateSpy).toHaveBeenCalledTimes(1);
 
     const pipeline = aggregateSpy.mock.calls[0][0];
-    expect(pipeline.some((stage) => stage.$unwind)).toBe(true);
-    expect(pipeline.filter((stage) => stage.$group)).toHaveLength(2);
+    expect(pipeline.some((stage) => stage.$match?._id)).toBe(true);
     const lookupStage = pipeline.find((stage) => stage.$lookup);
 
     expect(lookupStage).toBeDefined();
