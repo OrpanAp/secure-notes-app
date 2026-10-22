@@ -15,7 +15,7 @@ function publicUser(user) {
 
 async function register(req, res) {
   try {
-    const { name, email, password, interests } = req.body;
+    const { name, email, password, interests } = req.body || {};
 
     if (
       typeof name !== "string" ||
@@ -85,7 +85,12 @@ async function register(req, res) {
       name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
-      interests: (interests || []).map((item) => item.trim()),
+      interests: [...new Map(
+        (interests || [])
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .map((item) => [item.toLocaleLowerCase(), item])
+      ).values()],
       // Never accept a role from public registration.
       role: "user",
     });
@@ -117,7 +122,7 @@ async function register(req, res) {
 
 async function login(req, res) {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
 
     if (
       typeof email !== "string" ||
