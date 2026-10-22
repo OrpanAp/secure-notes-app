@@ -1,3 +1,4 @@
+
 const express = require("express");
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
@@ -41,22 +42,22 @@ describe("Authentication and role-based access", () => {
   });
 
   function tokenFor(role, tokenVersion = 0) {
-  return jwt.sign(
-    { sub: userId, role, tokenVersion },
-    process.env.JWT_SECRET,
-    { expiresIn: "5m" }
-  );
-}
+    return jwt.sign(
+      { sub: userId, role, tokenVersion },
+      process.env.JWT_SECRET,
+      { expiresIn: "5m" }
+    );
+  }
 
-function mockDatabaseUser(role, tokenVersion = 0) {
-  User.findById.mockReturnValue({
-    select: jest.fn().mockReturnValue({
-      lean: jest.fn().mockResolvedValue(
-        role ? { _id: userId, role, tokenVersion } : null
-      ),
-    }),
-  });
-}
+  function mockDatabaseUser(role, tokenVersion = 0) {
+    User.findById.mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(
+          role ? { _id: userId, role, tokenVersion } : null
+        ),
+      }),
+    });
+  }
 
   test("rejects a request without a token", async () => {
     const response = await request(app).get("/protected");
@@ -131,5 +132,59 @@ function mockDatabaseUser(role, tokenVersion = 0) {
     expect(response.body.message).toBe(
       "Authentication token is no longer valid"
     );
+  });
+
+  test("rejects an expired token", async () => {
+    const expiredToken = jwt.sign(
+      { sub: userId, role: "user", tokenVersion: 0 },
+      process.env.JWT_SECRET,
+      { expiresIn: -1 }
+    );
+
+    const response = await request(app)
+      .get("/protected")
+      .set("Authorization", `Bearer ${expiredToken}`);
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe(
+      "Invalid or expired authentication token"
+    );
+    expect(User.findById).not.toHaveBeenCalled();
+  });
+
+  test("rejects a token with a malformed tokenVersion claim", async () => {
+    const malformedToken = jwt.sign(
+      { sub: userId, role: "user", tokenVersion: "0" },
+      process.env.JWT_SECRET,
+      { expiresIn: "5m" }
+    );
+
+    const response = await request(app)
+      .get("/protected")
+      .set("Authorization", `Bearer ${malformedToken}`);
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("Invalid authentication token");
+    expect(User.findById).not.toHaveBeenCalled();
+  });
+
+  test("rejects a token with an invalid user ID claim", async () => {
+    const malformedToken = jwt.sign(
+      {
+        sub: "not-a-valid-object-id",
+        role: "user",
+        tokenVersion: 0,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "5m" }
+    );
+
+    const response = await request(app)
+      .get("/protected")
+      .set("Authorization", `Bearer ${malformedToken}`);
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("Invalid authentication token");
+    expect(User.findById).not.toHaveBeenCalled();
   });
 });
