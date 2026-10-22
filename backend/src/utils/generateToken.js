@@ -1,3 +1,4 @@
+
 const jwt = require("jsonwebtoken");
 
 function generateToken(user) {
@@ -9,6 +10,7 @@ function generateToken(user) {
     {
       sub: user._id.toString(),
       role: user.role,
+      tokenVersion: user.tokenVersion ?? 0,
     },
     process.env.JWT_SECRET,
     {

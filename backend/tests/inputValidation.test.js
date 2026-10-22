@@ -18,26 +18,28 @@ describe("Request validation hardening", () => {
   const adminId = "507f1f77bcf86cd799439012";
 
   const token = jwt.sign(
-    { sub: userId, role: "user" },
-    secret,
-    { expiresIn: "5m" }
-  );
+  { sub: userId, role: "user", tokenVersion: 0 },
+  secret,
+  { expiresIn: "5m" }
+);
 
-  const adminToken = jwt.sign(
-    { sub: adminId, role: "admin" },
-    secret,
-    { expiresIn: "5m" }
-  );
+const adminToken = jwt.sign(
+  { sub: adminId, role: "admin", tokenVersion: 0 },
+  secret,
+  { expiresIn: "5m" }
+);
 
-  function mockDatabaseUser(id, role) {
-    User.findById.mockImplementation((requestedId) => ({
-      select: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue(
-          requestedId === id ? { _id: id, role } : null
-        ),
-      }),
-    }));
-  }
+function mockDatabaseUser(id, role, tokenVersion = 0) {
+  User.findById.mockImplementation((requestedId) => ({
+    select: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(
+        requestedId === id
+          ? { _id: id, role, tokenVersion }
+          : null
+      ),
+    }),
+  }));
+}
 
   beforeEach(() => {
     User.findById.mockReset();

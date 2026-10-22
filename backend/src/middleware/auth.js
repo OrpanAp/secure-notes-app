@@ -26,7 +26,7 @@ async function authenticate(req, res, next) {
     });
   }
 
-  // Step 2: Ensure the token contains a valid MongoDB user ID.
+  // Step 2: Validate the token's user ID.
   if (
     typeof payload.sub !== "string" ||
     !mongoose.isValidObjectId(payload.sub)
@@ -37,29 +37,45 @@ async function authenticate(req, res, next) {
     });
   }
 
+  // Step 3: Validate the token version.
+  if (
+    !Number.isSafeInteger(payload.tokenVersion) ||
+    payload.tokenVersion < 0
+  ) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid authentication token",
+    });
+  }
+
   try {
-    // Step 3: Read the user's current role from MongoDB.
+    // Step 4: Load the user's current security fields.
     const user = await User.findById(payload.sub)
-      .select("role")
+      .select("role tokenVersion")
       .lean();
 
-    // Step 4: Reject deleted users or tokens with outdated roles.
-    if (!user || user.role !== payload.role) {
+    // Step 5: Reject deleted users, stale roles, or revoked tokens.
+    if (
+      !user ||
+      user.role !== payload.role ||
+      (user.tokenVersion ?? 0) !== payload.tokenVersion
+    ) {
       return res.status(401).json({
         success: false,
         message: "Authentication token is no longer valid",
       });
     }
 
-    // Step 5: Trust the verified, current database record.
+    // Step 6: Set the authenticated user's trusted identity.
+      // Step 6: Set the authenticated user's trusted identity.
     req.user = {
       id: payload.sub,
       role: user.role,
+      tokenVersion: user.tokenVersion ?? 0,
     };
 
     return next();
   } catch (error) {
-    // Database errors should reach the application's error handler.
     return next(error);
   }
 }

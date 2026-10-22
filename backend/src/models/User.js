@@ -16,6 +16,11 @@ const userSchema = new mongoose.Schema(
       default: "user",
       required: true,
     },
+tokenVersion: {
+  type: Number,
+  default: 0,
+  min: 0,
+},
     interests: { type: [String], default: [] },
   },
   { timestamps: true }

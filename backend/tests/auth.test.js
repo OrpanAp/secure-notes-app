@@ -40,23 +40,23 @@ describe("Authentication and role-based access", () => {
     );
   });
 
-  function tokenFor(role) {
-    return jwt.sign(
-      { sub: userId, role },
-      process.env.JWT_SECRET,
-      { expiresIn: "5m" }
-    );
-  }
+  function tokenFor(role, tokenVersion = 0) {
+  return jwt.sign(
+    { sub: userId, role, tokenVersion },
+    process.env.JWT_SECRET,
+    { expiresIn: "5m" }
+  );
+}
 
-  function mockDatabaseUser(role) {
-    User.findById.mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue(
-          role ? { _id: userId, role } : null
-        ),
-      }),
-    });
-  }
+function mockDatabaseUser(role, tokenVersion = 0) {
+  User.findById.mockReturnValue({
+    select: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(
+        role ? { _id: userId, role, tokenVersion } : null
+      ),
+    }),
+  });
+}
 
   test("rejects a request without a token", async () => {
     const response = await request(app).get("/protected");

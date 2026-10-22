@@ -166,4 +166,43 @@ async function login(req, res) {
   }
 }
 
-module.exports = { register, login };
+
+async function logout(req, res, next) {
+  try {
+    const versionFilter =
+      req.user.tokenVersion === 0
+        ? {
+            _id: req.user.id,
+            $or: [
+              { tokenVersion: 0 },
+              { tokenVersion: { $exists: false } },
+            ],
+          }
+        : {
+            _id: req.user.id,
+            tokenVersion: req.user.tokenVersion,
+          };
+
+    const result = await User.updateOne(versionFilter, {
+      $inc: { tokenVersion: 1 },
+    });
+
+    if (result.matchedCount !== 1) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication token is no longer valid",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Logout successful. All existing sessions have been invalidated.",
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+
+module.exports = { register, login, logout };

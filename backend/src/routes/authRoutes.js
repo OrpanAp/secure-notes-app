@@ -1,12 +1,17 @@
 const express = require("express");
 const User = require("../models/User");
-const { register, login } = require("../controllers/authController");
+const {
+  register,
+  login,
+  logout,
+} = require("../controllers/authController");
 const { authenticate } = require("../middleware/auth");
 
 const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
+router.post("/logout", authenticate, logout);
 
 router.get("/me", authenticate, async (req, res) => {
   try {
