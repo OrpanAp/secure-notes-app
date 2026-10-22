@@ -53,7 +53,7 @@ describe("Admin aggregation requirements", () => {
     expect(res.body.data).toEqual(expectedGroups);
     expect(aggregateSpy).toHaveBeenCalledTimes(1);
     const pipeline = aggregateSpy.mock.calls[0][0];
-    expect(pipeline.some((stage) => stage.$unwind?.$interests === "$interests")).toBe(true);
+    expect(pipeline.some((stage) => stage.$unwind === "$interests")).toBe(true);
     expect(pipeline.filter((stage) => stage.$group)).toHaveLength(2);
     expect(findSpy).not.toHaveBeenCalled();
     expect(countSpy).not.toHaveBeenCalled();
